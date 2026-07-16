@@ -58,3 +58,4 @@ server:
 logging:
   level:
     org.hibernate.SQL: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver: ERROR

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -58,6 +59,23 @@ public class GlobalExceptionHandler {
         log.error("Short code generation failed", e);
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable",
                 "Could not create a link. Please retry.", "generation-failed");
+    }
+
+    /**
+     * Malformed request body. The client sent unparseable JSON - a 400.
+     *
+     * Needed because the @ExceptionHandler(Exception.class) catch-all below
+     * runs before Spring's own resolver and would otherwise turn this into a
+     * 500. Anything Spring already maps to a 4xx must be caught explicitly
+     * here, or the safety net converts client errors into server errors.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleUnreadableBody(HttpMessageNotReadableException e) {
+        log.debug("Unreadable request body: {}", e.getMessage());
+        // Message deliberately generic: the parser's detail can echo the
+        // caller's payload back, and it exposes the JSON library in use.
+        return problem(HttpStatus.BAD_REQUEST, "Malformed request",
+                "Request body could not be parsed as JSON.", "malformed-request");
     }
 
     /**
